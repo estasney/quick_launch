@@ -1,25 +1,27 @@
+mod config;
 mod gui;
+mod utils;
 
-
-mod lib;
-
-use lib::config::Settings;
-
-use egui::ViewportBuilder;
+use crate::config::app_config::QuickLaunchAppSettings;
 use serde::{Deserialize, Serialize};
 
-fn main() {
+fn run_gui() -> eframe::Result {
+    let mut cfg: QuickLaunchAppSettings =
+        QuickLaunchAppSettings::load().expect("Failed to load config file");
     let native_options = eframe::NativeOptions {
-        viewport: ViewportBuilder::default()
+        viewport: egui::ViewportBuilder::default()
             .with_inner_size([370.0, 600.0])
             .with_min_inner_size([250.0, 400.0]),
         ..Default::default()
     };
-    let mut cfg: Settings = confy::load("quick_launch", None).unwrap();
-    // cfg.set_config_dir("~/.config/quick_launch".into());
-    
-    print!("{:?}", cfg)
-    
-        
-    
+
+    eframe::run_native(
+        "Quick Launch",
+        native_options,
+        Box::new(|cc| Ok(Box::new(gui::QuickLaunchApp::new(cc)))),
+    )
+}
+
+fn main() {
+    run_gui().expect("Failed to start gui");
 }

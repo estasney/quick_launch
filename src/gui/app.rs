@@ -1,20 +1,9 @@
-pub(crate) struct QuickLaunchApp {
-    quick_launch_dir: Option<std::path::PathBuf>, 
-    quick_launch_files: Vec<std::path::PathBuf>,
-}
+use crate::gui::QuickLaunchApp;
+use eframe::Frame;
+use egui::{Context, ScrollArea, Style, menu};
 
-impl QuickLaunchApp {
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        QuickLaunchApp::default()
-    }
-    
-}
-
-impl Default for QuickLaunchApp {
-    fn default() -> Self {
-        QuickLaunchApp {
-            quick_launch_dir: None,
-            quick_launch_files: Vec::new(),
-        }
+impl eframe::App for QuickLaunchApp {
+    fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
+        self.top_bar(ctx);
     }
 }
