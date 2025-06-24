@@ -1,87 +1,109 @@
 mod app;
 
-use crate::config::app_config::QuickLaunchAppSettings;
-use crate::config::profile::QuickLaunchProfileSettings;
-use std::slice::Iter;
+use egui::{Button, Widget};
+use std::env;
+use std::path::PathBuf;
 
 pub(crate) struct QuickLaunchApp {
-    settings: QuickLaunchAppSettings,
-    current_profile: String,
+    script_dir: PathBuf,
+    scripts: Vec<PathBuf>,
+    num_cols: usize,
+    num_rows: usize,
+    spacing: f32
 }
 
 impl QuickLaunchApp {
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        QuickLaunchApp::default()
-    }
+    pub fn new(cc: &eframe::CreationContext<'_>, script_dir: PathBuf) -> Self {
+        let script_copy = script_dir.clone();
+        let scripts = Self::find_executables_in_dir(&script_copy);
+        let num_cols = 3; // Default number of columns
+        let num_rows = (scripts.len() + num_cols - 1) / num_cols;
 
-    pub fn settings(&self) -> &QuickLaunchAppSettings {
-        &self.settings
+        QuickLaunchApp {
+            script_dir,
+            scripts,
+            num_cols,
+            num_rows,
+            spacing: 8.0
+        }
     }
-
-    pub fn settings_mut(&mut self) -> &mut QuickLaunchAppSettings {
-        &mut self.settings
-    }
-
-    pub fn profiles(&self) -> Iter<QuickLaunchProfileSettings> {
-        self.settings.profiles.iter()
-    }
-
-    pub fn iter_profiles(&self) -> impl Iterator<Item = &QuickLaunchProfileSettings> {
-        self.settings.iter_profiles()
-    }
-
-    fn top_bar(&mut self, ctx: &egui::Context) -> egui::Response {
-        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                egui::Grid::new("profile-grid")
-                    .num_columns(1)
-                    .spacing([40.0, 4.0])
+    fn action_panel(&mut self, ctx: &egui::Context) {
+        let ui = egui::CentralPanel::default()
+            .show(ctx, |ui| {
+                let spacing = ui.style().spacing.item_spacing.x;
+                let total_width = ui.available_width();
+                let button_width = (total_width - spacing * 2.0) / self.num_cols as f32;
+                let button_size = egui::vec2(button_width, 32.0);
+                egui::Grid::new("action_grid")
+                    .spacing(egui::vec2(spacing, spacing))
+                    .striped(true)
                     .show(ui, |ui| {
-                        ui.label("Profile:");
-                        egui::ComboBox::from_id_salt("Profile")
-                            .selected_text(self.current_profile.clone())
-                            .show_ui(ui, |ui| {
-                                for profile in self.settings.profiles.iter() {
-                                    let is_selected = self.current_profile == profile.name;
-                                    if ui.selectable_label(is_selected, &profile.name).clicked() {
-                                        self.current_profile = profile.name.clone();
+                        for row in 0..self.num_rows {
+                            for col in 0..self.num_cols {
+                                let index = row * self.num_cols + col;
+                                if index < self.scripts.len() {
+                                    let script_path = &self.scripts[index];
+                                    let script_name = script_path
+                                        .file_name()
+                                        .and_then(|s| s.to_str())
+                                        .unwrap_or("Unknown");
+                                    if ui.add_sized(button_size, egui::Button::new(script_name)).clicked() {
+                                        if let Err(e) =
+                                            std::process::Command::new(script_path).spawn()
+                                        {
+                                            eprintln!(
+                                                "Failed to execute script {:?}: {}",
+                                                script_path, e
+                                            );
+                                        }
                                     }
+                                    
                                 }
-                            });
-                    });
-                if ui.button("Add Script").clicked() {
-                    if let Some(path) = rfd::FileDialog::new()
-                        .set_title("Select Script")
-                        .pick_file()
-                    {
-                        let profile: &QuickLaunchProfileSettings = self.settings.profile_by_name(&self.current_profile)
-                            .expect("Current profile should always exist");
-                        profile.add_executable_from_path(path);
-                        
-                    }
-                    
-                }
+                            }
+                            ui.end_row();
+                        }
+                    })
             })
-        }).response
+            .inner;
     }
 
+    /// Scans the given directory and returns a Vec of PathBufs for all executable files.
+    pub fn find_executables_in_dir(dir: &PathBuf) -> Vec<PathBuf> {
+        use std::fs;
+        use std::os::unix::fs::PermissionsExt;
+        println!("Scanning directory: {:?}", dir);
+        let mut executables = Vec::new();
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file() {
+                    if let Ok(metadata) = fs::metadata(&path) {
+                        let permissions = metadata.permissions();
+                        // Check if owner, group, or others have execute permission
+                        if permissions.mode() & 0o111 != 0 {
+                            executables.push(path);
+                        }
+                    }
+                }
+            }
+        }
+        executables
+    }
 }
 
 impl Default for QuickLaunchApp {
     fn default() -> Self {
-
-        let mut settings = QuickLaunchAppSettings::load().expect("Failed to load launch settings");
-        // Ensure at least one profile exists, if not, create a default one
-        if settings.profiles.is_empty() {
-            settings.profiles.push(QuickLaunchProfileSettings::default());
-        }
-        // Our current profile is just the first one by default
-
-        let current_profile = settings.profiles.first().map(|p| p.name.clone()).expect("This should never happen, we just created a default profile");
-
-        Self {
-            settings: QuickLaunchAppSettings::load().expect("Failed to load config file"),
-            current_profile,
+        let script_dir = env::current_dir().expect("Failed to get current directory");
+        let script_copy = script_dir.clone();
+        let scripts = Self::find_executables_in_dir(&script_copy);
+        let num_cols = 3; // Default number of columns
+        let num_rows = (scripts.len() + num_cols - 1) / num_cols;
+        QuickLaunchApp {
+            script_dir,
+            scripts,
+            num_cols,
+            num_rows,
+            spacing: 8.0
         }
     }
 }

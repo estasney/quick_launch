@@ -1,27 +1,27 @@
-mod config;
 mod gui;
 mod utils;
 
-use crate::config::app_config::QuickLaunchAppSettings;
+use clap::Parser;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+use utils::arg_parser::Args;
 
-fn run_gui() -> eframe::Result {
-    let mut cfg: QuickLaunchAppSettings =
-        QuickLaunchAppSettings::load().expect("Failed to load config file");
+fn run_gui(script_dir: PathBuf) -> eframe::Result {
     let native_options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_inner_size([370.0, 600.0])
-            .with_min_inner_size([250.0, 400.0]),
+        viewport: egui::ViewportBuilder::default().with_inner_size([660.0, 800.0]),
+
         ..Default::default()
     };
 
     eframe::run_native(
         "Quick Launch",
         native_options,
-        Box::new(|cc| Ok(Box::new(gui::QuickLaunchApp::new(cc)))),
+        Box::new(|cc| Ok(Box::new(gui::QuickLaunchApp::new(cc, script_dir)))),
     )
 }
 
 fn main() {
-    run_gui().expect("Failed to start gui");
+    let args = Args::parse();
+    // run_gui(args.path).expect("Failed to launch GUI");
+    run_gui("/home/eric/Downloads".parse().unwrap()).expect("Failed to launch GUI");
 }
