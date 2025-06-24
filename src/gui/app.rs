@@ -1,6 +1,6 @@
 use crate::gui::QuickLaunchApp;
 use eframe::Frame;
-use egui::{Context, ScrollArea, Style, menu};
+use egui::{Context};
 
 impl eframe::App for QuickLaunchApp {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
@@ -8,4 +8,6 @@ impl eframe::App for QuickLaunchApp {
         self.action_panel(ctx);
 
     }
+    
+    
 }

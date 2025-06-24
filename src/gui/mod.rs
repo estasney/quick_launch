@@ -1,15 +1,12 @@
 mod app;
-
-use egui::{Button, Widget};
 use std::env;
 use std::path::PathBuf;
 
 pub(crate) struct QuickLaunchApp {
-    script_dir: PathBuf,
     scripts: Vec<PathBuf>,
     num_cols: usize,
     num_rows: usize,
-    spacing: f32
+    
 }
 
 impl QuickLaunchApp {
@@ -20,11 +17,9 @@ impl QuickLaunchApp {
         let num_rows = (scripts.len() + num_cols - 1) / num_cols;
 
         QuickLaunchApp {
-            script_dir,
             scripts,
             num_cols,
             num_rows,
-            spacing: 8.0
         }
     }
     fn action_panel(&mut self, ctx: &egui::Context) {
@@ -99,11 +94,10 @@ impl Default for QuickLaunchApp {
         let num_cols = 3; // Default number of columns
         let num_rows = (scripts.len() + num_cols - 1) / num_cols;
         QuickLaunchApp {
-            script_dir,
             scripts,
             num_cols,
             num_rows,
-            spacing: 8.0
+            
         }
     }
 }
