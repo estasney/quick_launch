@@ -1,12 +1,13 @@
 mod app;
 use std::env;
 use std::path::PathBuf;
+use crate::utils::launch::spawn_script_in_terminal;
 
 pub(crate) struct QuickLaunchApp {
+    script_dir: PathBuf,
     scripts: Vec<PathBuf>,
     num_cols: usize,
     num_rows: usize,
-    
 }
 
 impl QuickLaunchApp {
@@ -18,9 +19,20 @@ impl QuickLaunchApp {
 
         QuickLaunchApp {
             scripts,
+            script_dir,
             num_cols,
             num_rows,
         }
+    }
+    
+    fn top_panel(&mut self, ctx: &egui::Context) {
+        let ui = egui::TopBottomPanel::top("top_panel")
+            .show(ctx, |ui| {
+                ui.vertical_centered(|ui| {
+                    ui.label(self.script_dir.to_str().unwrap_or("Unknown"));
+                });
+            });
+        ui.inner
     }
     fn action_panel(&mut self, ctx: &egui::Context) {
         let ui = egui::CentralPanel::default()
@@ -38,19 +50,21 @@ impl QuickLaunchApp {
                                 let index = row * self.num_cols + col;
                                 if index < self.scripts.len() {
                                     let script_path = &self.scripts[index];
+                                    let tooltip = script_path.to_str().expect("Failed to convert path to str");
                                     let script_name = script_path
                                         .file_name()
                                         .and_then(|s| s.to_str())
                                         .unwrap_or("Unknown");
-                                    if ui.add_sized(button_size, egui::Button::new(script_name)).clicked() {
-                                        if let Err(e) =
-                                            std::process::Command::new(script_path).spawn()
-                                        {
-                                            eprintln!(
-                                                "Failed to execute script {:?}: {}",
-                                                script_path, e
-                                            );
-                                        }
+                                    if ui.add_sized(button_size, egui::Button::new(script_name)).on_hover_text(tooltip).clicked() {
+                                        spawn_script_in_terminal(script_path).expect("Failed to spawn script in terminal");
+                                        // if let Err(e) =
+                                        //     std::process::Command::new(script_path).spawn()
+                                        // {
+                                        //     eprintln!(
+                                        //         "Failed to execute script {:?}: {}",
+                                        //         script_path, e
+                                        //     );
+                                        // }
                                     }
                                     
                                 }
@@ -69,18 +83,22 @@ impl QuickLaunchApp {
         println!("Scanning directory: {:?}", dir);
         let mut executables = Vec::new();
         if let Ok(entries) = fs::read_dir(dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
+            for entry in entries {
+                let path = entry.unwrap().path();
                 if path.is_file() {
                     if let Ok(metadata) = fs::metadata(&path) {
                         let permissions = metadata.permissions();
                         // Check if owner, group, or others have execute permission
                         if permissions.mode() & 0o111 != 0 {
                             executables.push(path);
+                        } else {
+                            println!("Skipping non-executable file: {:?}", path);
                         }
                     }
                 }
             }
+        } else {
+            eprintln!("Failed to read directory: {:?}", dir);
         }
         executables
     }
@@ -97,6 +115,7 @@ impl Default for QuickLaunchApp {
             scripts,
             num_cols,
             num_rows,
+            script_dir
             
         }
     }

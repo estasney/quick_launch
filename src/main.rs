@@ -4,7 +4,8 @@ mod utils;
 use clap::Parser;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use utils::arg_parser::Args;
+
+use crate::utils::arg_parser::build_cli;
 
 fn run_gui(script_dir: PathBuf) -> eframe::Result {
     let native_options = eframe::NativeOptions {
@@ -19,7 +20,7 @@ fn run_gui(script_dir: PathBuf) -> eframe::Result {
             cc.egui_ctx.set_style({
                 let mut style = (*cc.egui_ctx.style()).clone();
                 style.spacing.item_spacing = egui::vec2(8.0, 8.0);
-                style.spacing.button_padding = egui::vec2(8.0, 4.0);
+                style.spacing.button_padding = egui::vec2(8.0, 8.0);
                 style
             });
             Ok(Box::new(gui::QuickLaunchApp::new(cc, script_dir)))
@@ -28,7 +29,15 @@ fn run_gui(script_dir: PathBuf) -> eframe::Result {
 }
 
 fn main() {
-    let args = Args::parse();
-    // run_gui(args.path).expect("Failed to launch GUI");
-    run_gui("/home/eric/Downloads".parse().unwrap()).expect("Failed to launch GUI");
+    let parsed_args = build_cli().get_matches();
+    let script_dir = parsed_args.get_one::<PathBuf>("dir").expect("We have a default dir").clone();
+    {
+        if !script_dir.exists() {
+            eprintln!("The specified directory does not exist: {:?}", script_dir);
+            std::fs::create_dir_all(&script_dir).expect("Failed to create the directory");
+        }
+    }
+    run_gui(script_dir).expect(
+        "Failed to run the GUI. Please make sure you have the latest version of the GUI installed.",
+    )
 }

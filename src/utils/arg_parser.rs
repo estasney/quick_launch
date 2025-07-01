@@ -1,25 +1,20 @@
-use clap::Parser;
-use clap::builder::ValueParserFactory;
-use std::{
-    path::{PathBuf},
-};
+use clap::{command, Arg, Command, value_parser, ValueHint};
+use std::path::{PathBuf};
 
-#[derive(Parser, Debug)]
-pub(crate) struct Args {
-    /// Directory to scan for executables
-    #[arg(short, long, value_name = "PATH", value_parser = parse_path, default_value = "./")]
-    pub path: PathBuf,
+pub fn build_cli() -> Command {
+    let def_dir = dirs::executable_dir().unwrap().join("quick_launch").into_os_string();
+        
+        
+
+    Command::new("cli")
+        .arg(
+            Arg::new("dir")
+                .long("dir")
+                .value_name("DIR")
+                .value_hint(ValueHint::DirPath)
+                .value_parser(value_parser!(PathBuf))
+                .default_value_os(def_dir.clone())
+        )
 }
 
-fn parse_path(path: &str) -> Result<PathBuf, String> {
-    let p = PathBuf::from(path);
-    let exists = p.exists();
-    let is_dir = p.is_dir();
-    if exists && is_dir {
-        Ok(p.canonicalize().unwrap())
-    } else if is_dir {
-        Err(format!("Directory does not exist: {}", path))
-    } else {
-        Err(format!("Path is not a directory: {}", path))
-    }
-}
+
