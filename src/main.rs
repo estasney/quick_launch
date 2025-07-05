@@ -1,18 +1,21 @@
 mod gui;
 mod utils;
+mod preferences;
 
-use std::path::PathBuf;
+
 use eframe::icon_data;
-use crate::utils::arg_parser::build_cli;
+use crate::utils::config::APP_TITLE;
 
-fn run_gui(script_dir: PathBuf) -> eframe::Result {
-    const ICON_BYTES: &[u8] = include_bytes!("assets/icon.png");
+fn run_gui() -> eframe::Result {
+    const ICON_BYTES: &[u8] = include_bytes!("../assets/icons/icon.png");
     let icon = icon_data::from_png_bytes(ICON_BYTES)
         .expect("icon must be valid 32-bit PNG");
     let native_options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([660.0, 800.0]).with_min_inner_size([240.0, 240.0]).with_icon(icon).with_title("Quick Launch"),
+        viewport: egui::ViewportBuilder::default().with_inner_size([660.0, 800.0]).with_min_inner_size([240.0, 240.0]).with_icon(icon).with_title(APP_TITLE),
         ..Default::default()
     };
+
+    let app_preferences = preferences::AppPreferences::load();
 
     eframe::run_native(
         "Quick Launch",
@@ -24,21 +27,13 @@ fn run_gui(script_dir: PathBuf) -> eframe::Result {
                 style.spacing.button_padding = egui::vec2(8.0, 8.0);
                 style
             });
-            Ok(Box::new(gui::QuickLaunchApp::new(cc, script_dir)))
+            Ok(Box::new(gui::QuickLaunchApp::new(cc, app_preferences)))
         }),
     )
 }
 
 fn main() {
-    let parsed_args = build_cli().get_matches();
-    let script_dir = parsed_args.get_one::<PathBuf>("dir").expect("We have a default dir").clone();
-    {
-        if !script_dir.exists() {
-            eprintln!("The specified directory does not exist: {:?}", script_dir);
-            std::fs::create_dir_all(&script_dir).expect("Failed to create the directory");
-        }
-    }
-    run_gui(script_dir).expect(
+    run_gui().expect(
         "Failed to run the GUI. Please make sure you have the latest version of the GUI installed.",
     )
 }

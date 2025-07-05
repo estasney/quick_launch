@@ -1,11 +1,18 @@
 mod app;
+mod assets;
+
+use crate::gui::assets::ICON_FONT;
+use crate::preferences::AppPreferences;
 use crate::utils::launch::{open_native_file_viewer, spawn_script_in_terminal};
-use std::env;
+use egui::RichText;
+use egui::{FontData, FontDefinitions, FontFamily};
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
+use std::sync::Arc;
 
-const N_COLS: usize = 3;
+const FOLDER_ICON_CHAR: char = '\u{ea83}';
+const FOLDER_MOVE_ICON_CHAR: char = '\u{e5fc}';
 
 pub(crate) struct QuickLaunchApp {
     script_dir: PathBuf,   // Directory containing the scripts
@@ -15,15 +22,34 @@ pub(crate) struct QuickLaunchApp {
 }
 
 impl QuickLaunchApp {
-    pub fn new(_cc: &eframe::CreationContext<'_>, script_dir: PathBuf) -> Self {
-        let script_copy = script_dir.clone();
-        let scripts = Self::find_executables_in_dir(&script_copy);
-        let num_rows = Self::compute_n_rows(N_COLS, scripts.len());
+    pub fn new(cc: &eframe::CreationContext<'_>, app_preferences: AppPreferences) -> Self {
+        let script_dir: PathBuf = app_preferences.script_dir.into();
+        let num_cols: usize = app_preferences.num_cols.get();
+        let scripts = Self::find_executables_in_dir(&script_dir);
+        let num_rows = Self::compute_n_rows(num_cols, scripts.len());
+        let icon_font = FontData::from_static(ICON_FONT);
+        let mut fonts = FontDefinitions::default();
+        fonts.font_data.insert("icons".into(), Arc::new(icon_font));
+        // Tie the new font to a custom family so we can target it explicitly:
+        fonts
+            .families
+            .entry(FontFamily::Name("icons".into()))
+            .or_default()
+            .push("icons".into());
+
+        // (optional) make it a fallback for proportional text so you can mix words + icons:
+        fonts
+            .families
+            .entry(FontFamily::Proportional)
+            .or_default()
+            .push("icons".into());
+
+        cc.egui_ctx.set_fonts(fonts);
 
         QuickLaunchApp {
             scripts,
             script_dir,
-            num_cols: N_COLS,
+            num_cols,
             num_rows,
         }
     }
@@ -36,12 +62,21 @@ impl QuickLaunchApp {
         }
     }
 
+    fn icon_button(ui: &mut egui::Ui, codepoint: char) -> egui::Response {
+        let icon = RichText::new(codepoint.to_string())
+            .font(egui::FontId::new(16.0, FontFamily::Name("icons".into())));
+        ui.button(icon)
+    }
+
     fn top_panel(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             let script_dir_text = self.script_dir.display().to_string();
             ui.horizontal_centered(|ui| {
                 ui.label(script_dir_text);
-                if ui.button("\u{1F4C1}").clicked() {
+                if Self::icon_button(ui, FOLDER_ICON_CHAR)
+                    .on_hover_text("Open Script Folder")
+                    .clicked()
+                {
                     open_native_file_viewer(&self.script_dir).expect("Failed to open directory");
                 }
             })
@@ -108,21 +143,5 @@ impl QuickLaunchApp {
             eprintln!("Failed to read directory: {dir:?}");
         }
         executables
-    }
-}
-
-impl Default for QuickLaunchApp {
-    fn default() -> Self {
-        let script_dir = env::current_dir().expect("Failed to get current directory");
-        let script_copy = script_dir.clone();
-        let scripts = Self::find_executables_in_dir(&script_copy);
-        let num_rows = Self::compute_n_rows(N_COLS, scripts.len());
-
-        QuickLaunchApp {
-            scripts,
-            num_cols: N_COLS,
-            num_rows,
-            script_dir,
-        }
     }
 }
