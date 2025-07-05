@@ -1,15 +1,15 @@
 mod gui;
 mod utils;
-
-use clap::Parser;
-use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-
+use eframe::icon_data;
 use crate::utils::arg_parser::build_cli;
 
 fn run_gui(script_dir: PathBuf) -> eframe::Result {
+    const ICON_BYTES: &[u8] = include_bytes!("assets/icon.png");
+    let icon = icon_data::from_png_bytes(ICON_BYTES)
+        .expect("icon must be valid 32-bit PNG");
     let native_options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([660.0, 800.0]).with_min_inner_size([240.0, 240.0]),
+        viewport: egui::ViewportBuilder::default().with_inner_size([660.0, 800.0]).with_min_inner_size([240.0, 240.0]).with_icon(icon).with_title("Quick Launch"),
         ..Default::default()
     };
 

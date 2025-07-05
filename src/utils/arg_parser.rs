@@ -1,4 +1,4 @@
-use clap::{command, Arg, Command, value_parser, ValueHint};
+use clap::{Arg, Command, value_parser, ValueHint};
 use std::path::{PathBuf};
 
 pub fn build_cli() -> Command {

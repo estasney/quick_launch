@@ -1,20 +1,22 @@
 mod app;
-use std::env;
-use std::path::PathBuf;
 use crate::utils::launch::spawn_script_in_terminal;
+use std::env;
+use std::fs;
+use std::os::unix::fs::PermissionsExt;
+use std::path::PathBuf;
 
 pub(crate) struct QuickLaunchApp {
-    script_dir: PathBuf,
-    scripts: Vec<PathBuf>,
+    script_dir: PathBuf,   // Directory containing the scripts
+    scripts: Vec<PathBuf>, // List of executable scripts in the directory
     num_cols: usize,
     num_rows: usize,
 }
 
 impl QuickLaunchApp {
-    pub fn new(cc: &eframe::CreationContext<'_>, script_dir: PathBuf) -> Self {
+    pub fn new(_cc: &eframe::CreationContext<'_>, script_dir: PathBuf) -> Self {
         let script_copy = script_dir.clone();
         let scripts = Self::find_executables_in_dir(&script_copy);
-        let num_cols = 3; // Default number of columns
+        let num_cols = 3;
         let num_rows = (scripts.len() + num_cols - 1) / num_cols;
 
         QuickLaunchApp {
@@ -24,18 +26,26 @@ impl QuickLaunchApp {
             num_rows,
         }
     }
-    
+
     fn top_panel(&mut self, ctx: &egui::Context) {
-        let ui = egui::TopBottomPanel::top("top_panel")
+        egui::TopBottomPanel::top("top_panel")
             .show(ctx, |ui| {
-                ui.vertical_centered(|ui| {
-                    ui.label(self.script_dir.to_str().unwrap_or("Unknown"));
-                });
-            });
-        ui.inner
+                let script_dir_text = self.script_dir.display().to_string();
+                ui.horizontal_centered(|ui| {
+                    ui.label(script_dir_text);
+                    if ui.button("\u{1F4C1}").clicked() {
+                        // Open the script directory in the file manager
+                        if let Err(e) = open::that(&self.script_dir) {
+                            eprintln!("Failed to open directory {:?}: {}", self.script_dir, e);
+                        }
+                    }
+                })
+            })
+            .inner;
     }
+
     fn action_panel(&mut self, ctx: &egui::Context) {
-        let ui = egui::CentralPanel::default()
+        egui::CentralPanel::default()
             .show(ctx, |ui| {
                 let spacing = ui.style().spacing.item_spacing.x;
                 let total_width = ui.available_width();
@@ -50,13 +60,20 @@ impl QuickLaunchApp {
                                 let index = row * self.num_cols + col;
                                 if index < self.scripts.len() {
                                     let script_path = &self.scripts[index];
-                                    let tooltip = script_path.to_str().expect("Failed to convert path to str");
+                                    let tooltip = script_path
+                                        .to_str()
+                                        .expect("Failed to convert path to str");
                                     let script_name = script_path
                                         .file_name()
                                         .and_then(|s| s.to_str())
                                         .unwrap_or("Unknown");
-                                    if ui.add_sized(button_size, egui::Button::new(script_name)).on_hover_text(tooltip).clicked() {
-                                        spawn_script_in_terminal(script_path).expect("Failed to spawn script in terminal");
+                                    if ui
+                                        .add_sized(button_size, egui::Button::new(script_name))
+                                        .on_hover_text(tooltip)
+                                        .clicked()
+                                    {
+                                        spawn_script_in_terminal(script_path)
+                                            .expect("Failed to spawn script in terminal");
                                         // if let Err(e) =
                                         //     std::process::Command::new(script_path).spawn()
                                         // {
@@ -66,7 +83,6 @@ impl QuickLaunchApp {
                                         //     );
                                         // }
                                     }
-                                    
                                 }
                             }
                             ui.end_row();
@@ -78,8 +94,6 @@ impl QuickLaunchApp {
 
     /// Scans the given directory and returns a Vec of PathBufs for all executable files.
     pub fn find_executables_in_dir(dir: &PathBuf) -> Vec<PathBuf> {
-        use std::fs;
-        use std::os::unix::fs::PermissionsExt;
         println!("Scanning directory: {:?}", dir);
         let mut executables = Vec::new();
         if let Ok(entries) = fs::read_dir(dir) {
@@ -115,8 +129,7 @@ impl Default for QuickLaunchApp {
             scripts,
             num_cols,
             num_rows,
-            script_dir
-            
+            script_dir,
         }
     }
 }
