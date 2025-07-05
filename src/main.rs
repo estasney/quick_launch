@@ -1,5 +1,6 @@
 mod gui;
 mod utils;
+
 use std::path::PathBuf;
 use eframe::icon_data;
 use crate::utils::arg_parser::build_cli;

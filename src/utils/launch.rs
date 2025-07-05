@@ -1,8 +1,8 @@
-use std::process::{Command, Stdio};
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 
-pub fn spawn_script_in_terminal(script_path: &PathBuf) -> io::Result<()> {
+pub fn spawn_script_in_terminal(script_path: &Path) -> io::Result<()> {
     #[cfg(target_os = "linux")]
     {
         // Prefer whatever the user set; otherwise fall back.
@@ -29,7 +29,7 @@ pub fn spawn_script_in_terminal(script_path: &PathBuf) -> io::Result<()> {
                 "/C",
                 "start",
                 "powershell",
-                "-NoExit",        // keep window up
+                "-NoExit", // keep window up
                 "-File",
                 script_path,
             ])
@@ -51,4 +51,8 @@ pub fn spawn_script_in_terminal(script_path: &PathBuf) -> io::Result<()> {
     }
 
     Ok(())
+}
+
+pub fn open_native_file_viewer(path: &PathBuf) -> io::Result<()> {
+    open::that(path)
 }
