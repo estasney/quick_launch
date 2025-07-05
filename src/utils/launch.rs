@@ -1,6 +1,8 @@
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use rfd::FileDialog;
+use crate::utils::task::Task;
 
 pub fn spawn_script_in_terminal(script_path: &Path) -> io::Result<()> {
     #[cfg(target_os = "linux")]
@@ -55,4 +57,10 @@ pub fn spawn_script_in_terminal(script_path: &Path) -> io::Result<()> {
 
 pub fn open_native_file_viewer(path: &PathBuf) -> io::Result<()> {
     open::that(path)
+}
+
+
+/// Kick off a folder dialog in a background thread.
+pub fn pick_folder_async() -> Task<Option<PathBuf>> {
+    Task::spawn(|| FileDialog::new().pick_folder())   // blocking call in here
 }

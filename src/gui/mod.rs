@@ -1,24 +1,30 @@
 mod app;
 mod assets;
+mod icon_button;
 
-use crate::gui::assets::ICON_FONT;
+use crate::gui::assets::setup_fonts;
+use crate::gui::icon_button::{folder_button, folder_open_dialog};
 use crate::preferences::AppPreferences;
-use crate::utils::launch::{open_native_file_viewer, spawn_script_in_terminal};
-use egui::RichText;
-use egui::{FontData, FontDefinitions, FontFamily};
+use crate::utils::launch::{open_native_file_viewer, pick_folder_async, spawn_script_in_terminal};
+use crate::utils::task::Task;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
-use std::sync::Arc;
-
-const FOLDER_ICON_CHAR: char = '\u{ea83}';
-const FOLDER_MOVE_ICON_CHAR: char = '\u{e5fc}';
 
 pub(crate) struct QuickLaunchApp {
     script_dir: PathBuf,   // Directory containing the scripts
     scripts: Vec<PathBuf>, // List of executable scripts in the directory
     num_cols: usize,
     num_rows: usize,
+    pick_folder_task: Option<Task<Option<PathBuf>>>,
+}
+
+fn compute_n_rows(n_cols: usize, n_items: usize) -> usize {
+    if n_items == 0 {
+        0
+    } else {
+        n_items.div_ceil(n_cols)
+    }
 }
 
 impl QuickLaunchApp {
@@ -26,46 +32,15 @@ impl QuickLaunchApp {
         let script_dir: PathBuf = app_preferences.script_dir.into();
         let num_cols: usize = app_preferences.num_cols.get();
         let scripts = Self::find_executables_in_dir(&script_dir);
-        let num_rows = Self::compute_n_rows(num_cols, scripts.len());
-        let icon_font = FontData::from_static(ICON_FONT);
-        let mut fonts = FontDefinitions::default();
-        fonts.font_data.insert("icons".into(), Arc::new(icon_font));
-        // Tie the new font to a custom family so we can target it explicitly:
-        fonts
-            .families
-            .entry(FontFamily::Name("icons".into()))
-            .or_default()
-            .push("icons".into());
-
-        // (optional) make it a fallback for proportional text so you can mix words + icons:
-        fonts
-            .families
-            .entry(FontFamily::Proportional)
-            .or_default()
-            .push("icons".into());
-
-        cc.egui_ctx.set_fonts(fonts);
-
+        let num_rows = compute_n_rows(num_cols, scripts.len());
+        cc.egui_ctx.set_fonts(setup_fonts());
         QuickLaunchApp {
             scripts,
             script_dir,
             num_cols,
             num_rows,
+            pick_folder_task: None,
         }
-    }
-
-    fn compute_n_rows(n_cols: usize, n_items: usize) -> usize {
-        if n_items == 0 {
-            0
-        } else {
-            n_items.div_ceil(n_cols)
-        }
-    }
-
-    fn icon_button(ui: &mut egui::Ui, codepoint: char) -> egui::Response {
-        let icon = RichText::new(codepoint.to_string())
-            .font(egui::FontId::new(16.0, FontFamily::Name("icons".into())));
-        ui.button(icon)
     }
 
     fn top_panel(&mut self, ctx: &egui::Context) {
@@ -73,11 +48,24 @@ impl QuickLaunchApp {
             let script_dir_text = self.script_dir.display().to_string();
             ui.horizontal_centered(|ui| {
                 ui.label(script_dir_text);
-                if Self::icon_button(ui, FOLDER_ICON_CHAR)
+                if folder_button(ui)
                     .on_hover_text("Open Script Folder")
                     .clicked()
                 {
                     open_native_file_viewer(&self.script_dir).expect("Failed to open directory");
+                }
+                if folder_open_dialog(ui).on_hover_text("Pick Script Folder").clicked() && self.pick_folder_task.is_none() {
+                    self.pick_folder_task = Some(pick_folder_async());
+                }
+                if let Some(task) = &mut self.pick_folder_task {
+                    if let Some(new_dir) = task.try_take() {
+                        if let Some(new_dir) = new_dir {
+                            self.script_dir = new_dir;
+                            self.scripts = Self::find_executables_in_dir(&self.script_dir);
+                            self.num_rows = compute_n_rows(self.num_cols, self.scripts.len());
+                        }
+                        self.pick_folder_task = None; // Reset the task
+                    }
                 }
             })
         });
