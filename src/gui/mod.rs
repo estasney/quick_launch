@@ -52,6 +52,11 @@ impl QuickLaunchApp {
         self.app_preferences.save()
     }
 
+    fn exit_application(&self, ui: &mut egui::Ui) {
+        ui.ctx().request_repaint();
+        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+    }
+
     fn get_script_dir(&self) -> &Path {
         self.app_preferences
             .script_dir
@@ -136,6 +141,7 @@ impl QuickLaunchApp {
                                 {
                                     spawn_script_in_terminal(script_path)
                                         .expect("Failed to spawn script in terminal");
+                                    self.exit_application(ui);
                                 }
                             }
                         }

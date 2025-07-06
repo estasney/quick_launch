@@ -11,13 +11,15 @@ pub fn spawn_script_in_terminal(script_path: &Path) -> io::Result<()> {
         let term = std::env::var("TERMINAL").unwrap_or_else(|_| "x-terminal-emulator".into());
 
         // Most modern emulators accept -e <cmd …>.
-        Command::new(term)
+        Command::new("setsid")
+            .arg(&term)
             .args([
                 "-e",
                 "bash",
                 "-c",
                 &format!("{path}; exec bash", path = script_path.to_string_lossy()),
             ])
+            .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()?; // detached; don’t .wait()
