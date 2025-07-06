@@ -7,7 +7,6 @@ use crate::gui::icon_button::{folder_button, folder_open_dialog};
 use crate::preferences::AppPreferences;
 use crate::utils::launch::{open_native_file_viewer, pick_folder_async, spawn_script_in_terminal};
 use crate::utils::task::Task;
-use std::borrow::Cow;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
