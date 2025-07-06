@@ -55,7 +55,7 @@ pub fn spawn_script_in_terminal(script_path: &Path) -> io::Result<()> {
     Ok(())
 }
 
-pub fn open_native_file_viewer(path: &PathBuf) -> io::Result<()> {
+pub fn open_native_file_viewer(path: &Path) -> io::Result<()> {
     open::that(path)
 }
 
