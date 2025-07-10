@@ -1,6 +1,6 @@
-use std::sync::Arc;
-use egui::FontDefinitions;
 use crate::utils::config::ICON_FONT_NAME;
+use egui::FontDefinitions;
+use std::sync::Arc;
 
 pub const ICON_FONT: &[u8] = include_bytes!(concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -10,7 +10,9 @@ pub const ICON_FONT: &[u8] = include_bytes!(concat!(
 pub fn setup_fonts() -> FontDefinitions {
     let icon_font = egui::FontData::from_static(ICON_FONT);
     let mut fonts = FontDefinitions::default();
-    fonts.font_data.insert(ICON_FONT_NAME.into(), Arc::new(icon_font));
+    fonts
+        .font_data
+        .insert(ICON_FONT_NAME.into(), Arc::new(icon_font));
     // Tie the new font to a custom family so we can target it explicitly:
     fonts
         .families

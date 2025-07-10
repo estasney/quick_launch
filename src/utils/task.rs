@@ -5,8 +5,8 @@ use std::{
 
 /// “Task” that will eventually hold a value of type `T`.
 pub struct Task<T> {
-    rx:   Receiver<T>,
-    _jh:  JoinHandle<()>,   // kept only to keep the thread alive
+    rx: Receiver<T>,
+    _jh: JoinHandle<()>, // kept only to keep the thread alive
 }
 
 impl<T> Task<T> {
@@ -29,8 +29,8 @@ impl<T> Task<T> {
     pub fn try_take(&mut self) -> Option<T> {
         use std::sync::mpsc::TryRecvError::*;
         match self.rx.try_recv() {
-            Ok(v)           => Some(v),
-            Err(Empty)      => None,
+            Ok(v) => Some(v),
+            Err(Empty) => None,
             Err(Disconnected) => None,
         }
     }

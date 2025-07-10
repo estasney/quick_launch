@@ -1,0 +1,28 @@
+[tasks.build-release]
+command = "cargo"
+args    = ["build", "--release"]
+
+# Generates ~/.local/share/applications/quick_launch.desktop
+[tasks.gen-desktop]
+script_runner = "bash"
+script = ["""
+#!/usr/bin/env bash
+set -euo pipefail
+
+BIN="$CARGO_MAKE_WORKING_DIRECTORY/target/release/quick_launch"
+ICON="$CARGO_MAKE_WORKING_DIRECTORY/assets/icons/quick_launch.png"
+DESK="$HOME/.local/share/applications/quick_launch.desktop"
+
+cat >"$DESK" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Quick Launch
+Exec=$BIN
+Icon=$ICON
+Terminal=false
+Categories=Utility;
+EOF
+
+chmod +x "$DESK"
+update-desktop-database ~/.local/share/applications
+"""]
