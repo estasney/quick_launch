@@ -9,13 +9,12 @@ pub struct RootFolder {
 
 impl RootFolder {
     pub fn sort_by_usage(&mut self, score: &dyn Fn(&Path) -> u64) {
-        self.entries.sort_by(|a, b| {
-            score(&b.executable_path).cmp(&score(&a.executable_path))
-        });
+        self.entries
+            .sort_by(|a, b| score(&b.executable_path).cmp(&score(&a.executable_path)));
         for folder in &mut self.folders {
-            folder.flat_entries.sort_by(|a, b| {
-                score(&b.executable_path).cmp(&score(&a.executable_path))
-            });
+            folder
+                .flat_entries
+                .sort_by(|a, b| score(&b.executable_path).cmp(&score(&a.executable_path)));
         }
     }
 }

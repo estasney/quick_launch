@@ -31,7 +31,8 @@ impl UsageStats {
     }
 
     pub fn prune(&mut self, root: &Path) {
-        self.counts.retain(|key, _| Path::new(key).starts_with(root));
+        self.counts
+            .retain(|key, _| Path::new(key).starts_with(root));
         self.save();
     }
 }

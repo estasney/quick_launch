@@ -156,14 +156,19 @@ impl QuickLaunchApp {
                     egui::Color32::WHITE,
                 );
 
-                let folder_rows = self.root_folder.folders[folder_idx].flat_entries.len().div_ceil(num_cols);
+                let folder_rows = self.root_folder.folders[folder_idx]
+                    .flat_entries
+                    .len()
+                    .div_ceil(num_cols);
                 egui::Grid::new(&folder_name)
                     .spacing(egui::vec2(spacing, spacing))
                     .show(ui, |ui| {
                         for row in 0..folder_rows {
                             for col in 0..num_cols {
                                 let index = row * num_cols + col;
-                                if let Some(entry) = self.root_folder.folders[folder_idx].flat_entries.get(index) {
+                                if let Some(entry) =
+                                    self.root_folder.folders[folder_idx].flat_entries.get(index)
+                                {
                                     let tooltip = entry.executable_path.to_string_lossy();
                                     if ui
                                         .add_sized(
@@ -191,6 +196,7 @@ impl QuickLaunchApp {
         let script_dir = self.get_script_dir().to_path_buf();
         self.usage_stats.prune(&script_dir);
         self.root_folder = build_tree(&script_dir);
-        self.root_folder.sort_by_usage(&|path| self.usage_stats.get(path));
+        self.root_folder
+            .sort_by_usage(&|path| self.usage_stats.get(path));
     }
 }

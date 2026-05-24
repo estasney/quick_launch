@@ -3056,7 +3056,7 @@ dependencies = [
 
 [[package]]
 name = "quick_launch"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "cargo-make",
  "confy",
