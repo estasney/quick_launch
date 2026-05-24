@@ -5,7 +5,7 @@ mod icon_button;
 use crate::gui::assets::setup_fonts;
 use crate::gui::icon_button::{folder_button, folder_open_dialog};
 use crate::preferences::AppPreferences;
-use crate::utils::build_tree::{build_tree, RootFolder};
+use crate::utils::build_tree::{RootFolder, build_tree};
 use crate::utils::launch::{open_native_file_viewer, pick_folder_async, spawn_script_in_terminal};
 use crate::utils::task::Task;
 use std::path::{Path, PathBuf};
@@ -53,7 +53,7 @@ impl QuickLaunchApp {
         self.app_preferences.script_dir = Some(path);
         self.save_preferences();
     }
-    
+
     fn script_dir_component(&mut self, ui: &mut egui::Ui) {
         ui.horizontal_centered(|ui| {
             let open_folder_target: &Path = self.get_script_dir();
@@ -137,15 +137,10 @@ impl QuickLaunchApp {
                     egui::FontId::default(),
                     egui::Color32::WHITE,
                 );
-                let (rect, _) = ui.allocate_exact_size(
-                    galley.size() + padding * 2.0,
-                    egui::Sense::hover(),
-                );
-                ui.painter().rect_filled(
-                    rect,
-                    4.0,
-                    egui::Color32::from_gray(40),
-                );
+                let (rect, _) =
+                    ui.allocate_exact_size(galley.size() + padding * 2.0, egui::Sense::hover());
+                ui.painter()
+                    .rect_filled(rect, 4.0, egui::Color32::from_gray(40));
                 ui.painter().text(
                     rect.center(),
                     egui::Align2::CENTER_CENTER,

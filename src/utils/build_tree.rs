@@ -44,7 +44,12 @@ fn read_children(dir: &Path) -> (Vec<Entry>, Vec<Folder>) {
         if path.is_dir() {
             let (child_entries, child_folders) = read_children(&path);
             let mut flat_entries = Vec::new();
-            flatten_entries(&child_entries, &child_folders, PathBuf::new(), &mut flat_entries);
+            flatten_entries(
+                &child_entries,
+                &child_folders,
+                PathBuf::new(),
+                &mut flat_entries,
+            );
             folders.push(Folder {
                 name: file_name_string(&path),
                 entries: child_entries,
