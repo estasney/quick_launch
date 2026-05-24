@@ -92,14 +92,14 @@ impl QuickLaunchApp {
             {
                 self.pick_folder_task = Some(pick_folder_async());
             }
-            if let Some(task) = &mut self.pick_folder_task {
-                if let Some(new_dir) = task.try_take() {
-                    if let Some(new_dir) = new_dir {
-                        self.set_script_dir(new_dir);
-                        self.rescan_dir();
-                    }
-                    self.pick_folder_task = None;
+            if let Some(task) = &mut self.pick_folder_task
+                && let Some(new_dir) = task.try_take()
+            {
+                if let Some(new_dir) = new_dir {
+                    self.set_script_dir(new_dir);
+                    self.rescan_dir();
                 }
+                self.pick_folder_task = None;
             }
         });
     }
@@ -164,15 +164,15 @@ impl QuickLaunchApp {
         if let Ok(entries) = fs::read_dir(dir) {
             for entry in entries {
                 let path = entry.unwrap().path();
-                if path.is_file() {
-                    if let Ok(metadata) = fs::metadata(&path) {
-                        let permissions = metadata.permissions();
-                        // Check if owner, group, or others have execute permission
-                        if permissions.mode() & 0o111 != 0 {
-                            executables.push(path);
-                        } else {
-                            println!("Skipping non-executable file: {path:?}");
-                        }
+                if path.is_file()
+                    && let Ok(metadata) = fs::metadata(&path)
+                {
+                    let permissions = metadata.permissions();
+                    // Check if owner, group, or others have execute permission
+                    if permissions.mode() & 0o111 != 0 {
+                        executables.push(path);
+                    } else {
+                        println!("Skipping non-executable file: {path:?}");
                     }
                 }
             }
