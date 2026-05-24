@@ -1,6 +1,6 @@
 [tasks.build-release]
 command = "cargo"
-args    = ["build", "--release"]
+args = ["build", "--release"]
 
 # Generates ~/.local/share/applications/quick_launch.desktop
 [tasks.gen-desktop]

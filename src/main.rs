@@ -1,5 +1,6 @@
 mod gui;
 mod preferences;
+mod usage_stats;
 mod utils;
 
 use crate::utils::config::APP_TITLE;

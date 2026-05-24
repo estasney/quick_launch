@@ -5,6 +5,7 @@ mod icon_button;
 use crate::gui::assets::setup_fonts;
 use crate::gui::icon_button::{folder_button, folder_open_dialog};
 use crate::preferences::AppPreferences;
+use crate::usage_stats::UsageStats;
 use crate::utils::build_tree::{RootFolder, build_tree};
 use crate::utils::launch::{open_native_file_viewer, pick_folder_async, spawn_script_in_terminal};
 use crate::utils::task::Task;
@@ -14,6 +15,7 @@ pub(crate) struct QuickLaunchApp {
     root_folder: RootFolder,
     pick_folder_task: Option<Task<Option<PathBuf>>>,
     app_preferences: AppPreferences,
+    usage_stats: UsageStats,
 }
 
 impl QuickLaunchApp {
@@ -23,13 +25,16 @@ impl QuickLaunchApp {
             .clone()
             .unwrap_or_else(|| app_preferences.default_script_dir.clone());
 
-        let root_folder = build_tree(&target_directory);
+        let usage_stats = UsageStats::load();
+        let mut root_folder = build_tree(&target_directory);
+        root_folder.sort_by_usage(&|path| usage_stats.get(path));
 
         cc.egui_ctx.set_fonts(setup_fonts());
         QuickLaunchApp {
             root_folder,
             pick_folder_task: None,
             app_preferences,
+            usage_stats,
         }
     }
 
@@ -115,6 +120,7 @@ impl QuickLaunchApp {
                                     .on_hover_text(tooltip.as_ref())
                                     .clicked()
                                 {
+                                    self.usage_stats.increment(&entry.executable_path);
                                     spawn_script_in_terminal(&entry.executable_path)
                                         .expect("Failed to spawn script in terminal");
                                     self.exit_application(ui);
@@ -125,15 +131,16 @@ impl QuickLaunchApp {
                     }
                 });
 
-            for folder in &self.root_folder.folders {
-                if folder.flat_entries.is_empty() {
+            for folder_idx in 0..self.root_folder.folders.len() {
+                if self.root_folder.folders[folder_idx].flat_entries.is_empty() {
                     continue;
                 }
 
                 ui.separator();
                 let padding = egui::vec2(8.0, 4.0);
+                let folder_name = self.root_folder.folders[folder_idx].name.clone();
                 let galley = ui.painter().layout_no_wrap(
-                    folder.name.clone(),
+                    folder_name.clone(),
                     egui::FontId::default(),
                     egui::Color32::WHITE,
                 );
@@ -144,19 +151,19 @@ impl QuickLaunchApp {
                 ui.painter().text(
                     rect.center(),
                     egui::Align2::CENTER_CENTER,
-                    &folder.name,
+                    &folder_name,
                     egui::FontId::default(),
                     egui::Color32::WHITE,
                 );
 
-                let folder_rows = folder.flat_entries.len().div_ceil(num_cols);
-                egui::Grid::new(&folder.name)
+                let folder_rows = self.root_folder.folders[folder_idx].flat_entries.len().div_ceil(num_cols);
+                egui::Grid::new(&folder_name)
                     .spacing(egui::vec2(spacing, spacing))
                     .show(ui, |ui| {
                         for row in 0..folder_rows {
                             for col in 0..num_cols {
                                 let index = row * num_cols + col;
-                                if let Some(entry) = folder.flat_entries.get(index) {
+                                if let Some(entry) = self.root_folder.folders[folder_idx].flat_entries.get(index) {
                                     let tooltip = entry.executable_path.to_string_lossy();
                                     if ui
                                         .add_sized(
@@ -166,6 +173,7 @@ impl QuickLaunchApp {
                                         .on_hover_text(tooltip.as_ref())
                                         .clicked()
                                     {
+                                        self.usage_stats.increment(&entry.executable_path);
                                         spawn_script_in_terminal(&entry.executable_path)
                                             .expect("Failed to spawn script in terminal");
                                         self.exit_application(ui);
@@ -180,6 +188,9 @@ impl QuickLaunchApp {
     }
 
     fn rescan_dir(&mut self) {
-        self.root_folder = build_tree(self.get_script_dir());
+        let script_dir = self.get_script_dir().to_path_buf();
+        self.usage_stats.prune(&script_dir);
+        self.root_folder = build_tree(&script_dir);
+        self.root_folder.sort_by_usage(&|path| self.usage_stats.get(path));
     }
 }
